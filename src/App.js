@@ -68,7 +68,6 @@ export default function App() {
   const yield2 = calcYield(inputs.roof2_kwp, inputs.roof2_orientation, inputs.roof2_tilt);
   const totalYield = yield1 + yield2;
 
-  // Verbesserte Eigenverbrauchslogik inkl. Tag/Nacht
   const dayShare = inputs.dayNightSplit / 100;
   const storageEffect = Math.min(inputs.storageCapacity / 10, 1);
   const selfUseBase = inputs.selfUsePercent / 100;
@@ -81,20 +80,23 @@ export default function App() {
   const totalCost = inputs.systemCost + inputs.storageCost;
   const payback = totalRevenue > 0 ? totalCost / totalRevenue : Infinity;
 
-  const renderInput = (key, label, isSelect = false, options = [], isSlider = false, min = 0, max = 100, step = 1) => (
+  const renderInput = (key, label, isSelect = false, options = [], isSlider = false, min = 0, max = 100, step = 1, extraInput = false) => (
     <div key={key} style={{ marginBottom: "1rem" }}>
       <label style={{ display: "block", fontWeight: "bold", color: "#0055aa" }}>{label}</label>
       {isSlider ? (
-        <input
-          type="range"
-          name={key}
-          value={inputs[key]}
-          min={min}
-          max={max}
-          step={step}
-          onChange={handleChange}
-          style={{ width: "100%" }}
-        />
+        <>
+          <input
+            type="range"
+            name={key}
+            value={inputs[key]}
+            min={min}
+            max={max}
+            step={step}
+            onChange={handleChange}
+            style={{ width: "100%" }}
+          />
+          <div style={{ textAlign: "right", fontSize: "0.9rem", color: "#555" }}>{inputs[key]}%</div>
+        </>
       ) : isSelect ? (
         <select
           name={key}
@@ -114,6 +116,15 @@ export default function App() {
           style={{ padding: "0.4rem", width: "100%", border: errors[key] ? "1px solid red" : "1px solid #007bff" }}
         />
       )}
+      {extraInput && (
+        <input
+          type="number"
+          name={key}
+          value={inputs[key]}
+          onChange={handleChange}
+          style={{ marginTop: "0.4rem", width: "100%", padding: "0.4rem", border: errors[key] ? "1px solid red" : "1px solid #007bff" }}
+        />
+      )}
       {errors[key] && <span style={{ color: "red", fontSize: "0.9rem" }}>{errors[key]}</span>}
     </div>
   );
@@ -125,17 +136,15 @@ export default function App() {
       {renderInput("roof1_kwp", "Dachfläche 1 (kWp)")}
       {renderInput("roof1_orientation", "Ausrichtung Dach 1", true, Object.keys(orientationFactor))}
       {renderInput("roof1_tilt", "Neigung Dach 1 (°)")}
-
       {renderInput("roof2_kwp", "Dachfläche 2 (kWp)")}
       {renderInput("roof2_orientation", "Ausrichtung Dach 2", true, Object.keys(orientationFactor))}
       {renderInput("roof2_tilt", "Neigung Dach 2 (°)")}
-
       {renderInput("region", "Standort", true, Object.keys(regions))}
       {renderInput("selfUsePercent", "Basis-Eigenverbrauch ohne Speicher (%)", false)}
       {renderInput("dayNightSplit", `Verbrauchsanteil tagsüber: ${inputs.dayNightSplit}% Tag / ${100 - inputs.dayNightSplit}% Nacht`, false, [], true, 10, 90)}
       {renderInput("electricityPrice", "Strompreis (€/kWh)")}
       {renderInput("feedInTariff", "Einspeisevergütung (€/kWh)")}
-      {renderInput("storageCapacity", "Speicherkapazität (kWh)", false, [], true, 0, 20)}
+      {renderInput("storageCapacity", "Speicherkapazität (kWh)", false, [], true, 0, 20, 1, true)}
       {renderInput("systemCost", "Anlagenpreis (€)")}
       {renderInput("storageCost", "Speicherpreis (€)")}
 
