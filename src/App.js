@@ -68,9 +68,12 @@ export default function App() {
   const yield2 = calcYield(inputs.roof2_kwp, inputs.roof2_orientation, inputs.roof2_tilt);
   const totalYield = yield1 + yield2;
 
+  // Verbesserte Eigenverbrauchslogik inkl. Tag/Nacht
+  const dayShare = inputs.dayNightSplit / 100;
   const storageEffect = Math.min(inputs.storageCapacity / 10, 1);
-  const selfUseRate = Math.min(inputs.selfUsePercent + storageEffect * 30, 100);
-  const selfUsed = (totalYield * selfUseRate) / 100;
+  const selfUseBase = inputs.selfUsePercent / 100;
+  const enhancedSelfUse = Math.min((selfUseBase + storageEffect * 0.3) * dayShare, 1);
+  const selfUsed = totalYield * enhancedSelfUse;
   const fedIn = totalYield - selfUsed;
   const saving = selfUsed * inputs.electricityPrice;
   const feedInRevenue = fedIn * inputs.feedInTariff;
@@ -78,10 +81,21 @@ export default function App() {
   const totalCost = inputs.systemCost + inputs.storageCost;
   const payback = totalRevenue > 0 ? totalCost / totalRevenue : Infinity;
 
-  const renderInput = (key, label, isSelect = false, options = []) => (
+  const renderInput = (key, label, isSelect = false, options = [], isSlider = false, min = 0, max = 100, step = 1) => (
     <div key={key} style={{ marginBottom: "1rem" }}>
       <label style={{ display: "block", fontWeight: "bold", color: "#0055aa" }}>{label}</label>
-      {isSelect ? (
+      {isSlider ? (
+        <input
+          type="range"
+          name={key}
+          value={inputs[key]}
+          min={min}
+          max={max}
+          step={step}
+          onChange={handleChange}
+          style={{ width: "100%" }}
+        />
+      ) : isSelect ? (
         <select
           name={key}
           value={inputs[key]}
@@ -106,6 +120,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
+      <img src="/logo192.png" alt="Firmenlogo" style={{ height: "60px", marginBottom: "1rem" }} />
       <h1>PV-Ertragsrechner</h1>
       {renderInput("roof1_kwp", "Dachfläche 1 (kWp)")}
       {renderInput("roof1_orientation", "Ausrichtung Dach 1", true, Object.keys(orientationFactor))}
@@ -116,11 +131,11 @@ export default function App() {
       {renderInput("roof2_tilt", "Neigung Dach 2 (°)")}
 
       {renderInput("region", "Standort", true, Object.keys(regions))}
-      {renderInput("selfUsePercent", "Basis-Eigenverbrauch (%)")}
-      {renderInput("dayNightSplit", "Tag/Nacht-Verteilung (%)")}
+      {renderInput("selfUsePercent", "Basis-Eigenverbrauch ohne Speicher (%)", false)}
+      {renderInput("dayNightSplit", `Verbrauchsanteil tagsüber: ${inputs.dayNightSplit}% Tag / ${100 - inputs.dayNightSplit}% Nacht`, false, [], true, 10, 90)}
       {renderInput("electricityPrice", "Strompreis (€/kWh)")}
       {renderInput("feedInTariff", "Einspeisevergütung (€/kWh)")}
-      {renderInput("storageCapacity", "Speicherkapazität (kWh)")}
+      {renderInput("storageCapacity", "Speicherkapazität (kWh)", false, [], true, 0, 20)}
       {renderInput("systemCost", "Anlagenpreis (€)")}
       {renderInput("storageCost", "Speicherpreis (€)")}
 
@@ -129,7 +144,7 @@ export default function App() {
         <p>Jahresertrag Dachfläche 1: {yield1.toFixed(0)} kWh</p>
         <p>Jahresertrag Dachfläche 2: {yield2.toFixed(0)} kWh</p>
         <p>Gesamtertrag: {totalYield.toFixed(0)} kWh</p>
-        <p>Eigenverbrauchsanteil: {selfUseRate.toFixed(1)} %</p>
+        <p>Eigenverbrauchsanteil (unter Tags inkl. Speicher): {(enhancedSelfUse * 100).toFixed(1)} %</p>
         <p>Selbst genutzte Energie: {selfUsed.toFixed(0)} kWh</p>
         <p>Eingespeiste Energie: {fedIn.toFixed(0)} kWh</p>
         <p>Stromkostenersparnis: {saving.toFixed(2)} €</p>
