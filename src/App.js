@@ -1,1 +1,4 @@
-<full updated App.js code from the canvas above>
+
+import React, { useState } from "react";
+
+// ... vollständiger Code (aus Canvas übernommen)
