@@ -18,6 +18,8 @@ export default function App() {
     storageCost: 6000,
   });
 
+  const [errors, setErrors] = useState({});
+
   const regions = {
     Norddeutschland: 900,
     Mitteldeutschland: 1000,
@@ -38,7 +40,23 @@ export default function App() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setInputs((prev) => ({ ...prev, [name]: isNaN(value) ? value : parseFloat(value) }));
+    const numeric = !name.includes("orientation") && name !== "region";
+
+    let newValue = value;
+    let newErrors = { ...errors };
+
+    if (value === "") {
+      newValue = "";
+      newErrors[name] = "Eingabe erforderlich";
+    } else if (numeric && isNaN(value)) {
+      newErrors[name] = "Nur Zahlen erlaubt";
+    } else {
+      newValue = numeric ? parseFloat(value) : value;
+      delete newErrors[name];
+    }
+
+    setInputs((prev) => ({ ...prev, [name]: newValue }));
+    setErrors(newErrors);
   };
 
   const calcYield = (kwp, orientation, tilt) => {
@@ -60,22 +78,51 @@ export default function App() {
   const totalCost = inputs.systemCost + inputs.storageCost;
   const payback = totalRevenue > 0 ? totalCost / totalRevenue : Infinity;
 
+  const renderInput = (key, label, isSelect = false, options = []) => (
+    <div key={key} style={{ marginBottom: "1rem" }}>
+      <label style={{ display: "block", fontWeight: "bold", color: "#0055aa" }}>{label}</label>
+      {isSelect ? (
+        <select
+          name={key}
+          value={inputs[key]}
+          onChange={handleChange}
+          style={{ padding: "0.4rem", width: "100%", border: "1px solid #007bff" }}
+        >
+          {options.map((opt) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          name={key}
+          value={inputs[key]}
+          onChange={handleChange}
+          style={{ padding: "0.4rem", width: "100%", border: errors[key] ? "1px solid red" : "1px solid #007bff" }}
+        />
+      )}
+      {errors[key] && <span style={{ color: "red", fontSize: "0.9rem" }}>{errors[key]}</span>}
+    </div>
+  );
+
   return (
     <div style={{ fontFamily: "sans-serif", padding: "2rem" }}>
       <h1>PV-Ertragsrechner</h1>
-      {Object.keys(inputs).map((key) => (
-        <div key={key} style={{ marginBottom: "1rem" }}>
-          <label style={{ display: "block", fontWeight: "bold", color: "#0055aa" }}>
-            {key.replace(/_/g, " ")}:
-          </label>
-          <input
-            name={key}
-            value={inputs[key]}
-            onChange={handleChange}
-            style={{ padding: "0.4rem", width: "100%", border: "1px solid #007bff" }}
-          />
-        </div>
-      ))}
+      {renderInput("roof1_kwp", "Dachfläche 1 (kWp)")}
+      {renderInput("roof1_orientation", "Ausrichtung Dach 1", true, Object.keys(orientationFactor))}
+      {renderInput("roof1_tilt", "Neigung Dach 1 (°)")}
+
+      {renderInput("roof2_kwp", "Dachfläche 2 (kWp)")}
+      {renderInput("roof2_orientation", "Ausrichtung Dach 2", true, Object.keys(orientationFactor))}
+      {renderInput("roof2_tilt", "Neigung Dach 2 (°)")}
+
+      {renderInput("region", "Standort", true, Object.keys(regions))}
+      {renderInput("selfUsePercent", "Basis-Eigenverbrauch (%)")}
+      {renderInput("dayNightSplit", "Tag/Nacht-Verteilung (%)")}
+      {renderInput("electricityPrice", "Strompreis (€/kWh)")}
+      {renderInput("feedInTariff", "Einspeisevergütung (€/kWh)")}
+      {renderInput("storageCapacity", "Speicherkapazität (kWh)")}
+      {renderInput("systemCost", "Anlagenpreis (€)")}
+      {renderInput("storageCost", "Speicherpreis (€)")}
 
       <div style={{ background: "#e6ffe6", padding: "1rem", borderRadius: "8px" }}>
         <h2>Ergebnisse</h2>
